@@ -1,0 +1,21 @@
+{
+    "files.associations": {
+        "app.h": "c",
+        "ms1100.h": "c",
+        "sys.h": "c",
+        "gpio.h": "c",
+        "main.h": "c",
+        "w25q128.h": "c",
+        "screen.h": "c",
+        "sdcard.h": "c",
+        "at24c256.h": "c",
+        "hmi_driver.h": "c",
+        "detect.h": "c",
+        "string.h": "c",
+        "curvematch.h": "c",
+        "cmd_queue.h": "c",
+        "usart.h": "c",
+        "stdlib.h": "c",
+        "stdio.h": "c"
+    }
+}

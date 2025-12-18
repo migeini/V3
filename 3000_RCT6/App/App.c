@@ -379,16 +379,25 @@ static void cmdCallbackCustomBtn(uint8 screen_id, uint8 control_id,
       u16 value = g_MS1100.readValue();
       float con = (gp_Equation->a) * value + gp_Equation->b;
 
-      // 显示结果到页面2的控件9
-      char resultBuf[32];
-      sprintf(resultBuf, "%.2f", con); // 格式化浓度值，保留2位小数
-      SetTextValue(2, 9, (unsigned char *)resultBuf); // 显示到页面2控件9
+      // 🆕 使用数值格式显示结果到页面2的控件9
+      // 将浮点数转换为整数 (保留2位小数 → 乘以100)
+      uint32 conInt = (uint32)(con * 100); // 例如: 46.37 → 4637
+
+      // 使用SetTextInt32发送数值格式
+      SetTextInt32(2, 9, conInt, 0, 6);
+      // 参数说明:
+      // 2: 页面2
+      // 9: 控件9
+      // conInt: 浓度值×100 (4637)
+      // 0: 无符号数
+      // 6: 填充位数
 
       // 通过串口输出调试信息
-      debugInfo("Concentration: %.2f mg/L (ADC: %d)", con, value);
+      debugInfo("Concentration: %.2f mg/L (ADC: %d, Int: %d)", con, value,
+                conInt);
     } else {
-      // 如果未加载标准曲线，显示错误信息
-      SetTextValue(2, 9, (unsigned char *)"ERROR");
+      // 如果未加载标准曲线，显示错误 (显示0)
+      SetTextInt32(2, 9, 0, 0, 6);
       debugError("No equation loaded, cannot detect concentration");
     }
     return; // 处理完成，直接返回

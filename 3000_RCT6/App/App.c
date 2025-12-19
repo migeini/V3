@@ -375,29 +375,72 @@ static void cmdCallbackCustomBtn(uint8 screen_id, uint8 control_id,
   if (screen_id == 2 && control_id == 9 && data == 1) {
     // 检查是否已加载标准曲线
     if (equationSelOk == 1) {
-      // 执行浓度检测
-      u16 value = g_MS1100.readValue();
-      float con = (gp_Equation->a) * value + gp_Equation->b;
+      // 🆕 开启荧光灯
+      fluLedSetState(1);
 
-      // 🆕 使用数值格式显示结果到页面2的控件9
-      // 将浮点数转换为整数 (保留2位小数 → 乘以100)
-      uint32 conInt = (uint32)(con * 100); // 例如: 46.37 → 4637
+      // 定义变量
+      u16 val_raw1, val_raw2, val_max;
+      float con1, con2, con3, avgCon;
+      char resultBuf[32];
 
-      // 使用SetTextInt32发送数值格式
-      SetTextInt32(2, 9, conInt, 0, 6);
-      // 参数说明:
-      // 2: 页面2
-      // 9: 控件9
-      // conInt: 浓度值×100 (4637)
-      // 0: 无符号数
-      // 6: 填充位数
+      // --- 第1次采集 (取两次最大值) ---
+      delayMsSoftware(1000); // 预热/间隔1秒
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
 
-      // 通过串口输出调试信息
-      debugInfo("Concentration: %.2f mg/L (ADC: %d, Int: %d)", con, value,
-                conInt);
+      con1 = (gp_Equation->a) * val_max + gp_Equation->b;
+
+      // 显示第1次结果 (页面3, 控件2)
+      sprintf(resultBuf, "%.2f", con1);
+      SetTextValue(3, 2, (unsigned char *)resultBuf);
+      debugInfo("1st: %.2f (Max: %d, v1: %d, v2: %d)", con1, val_max, val_raw1,
+                val_raw2);
+
+      // --- 第2次采集 (取两次最大值) ---
+      delayMsSoftware(1000); // 间隔1秒
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      con2 = (gp_Equation->a) * val_max + gp_Equation->b;
+
+      // 显示第2次结果 (页面3, 控件3)
+      sprintf(resultBuf, "%.2f", con2);
+      SetTextValue(3, 3, (unsigned char *)resultBuf);
+      debugInfo("2nd: %.2f (Max: %d, v1: %d, v2: %d)", con2, val_max, val_raw1,
+                val_raw2);
+
+      // --- 第3次采集 (取两次最大值) ---
+      delayMsSoftware(1000); // 间隔1秒
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      con3 = (gp_Equation->a) * val_max + gp_Equation->b;
+
+      // 显示第3次结果 (页面3, 控件4)
+      sprintf(resultBuf, "%.2f", con3);
+      SetTextValue(3, 4, (unsigned char *)resultBuf);
+      debugInfo("3rd: %.2f (Max: %d, v1: %d, v2: %d)", con3, val_max, val_raw1,
+                val_raw2);
+
+      // --- 计算平均值 ---
+      avgCon = (con1 + con2 + con3) / 3.0f;
+
+      // 显示平均值 (页面3, 控件5)
+      sprintf(resultBuf, "%.2f", avgCon);
+      SetTextValue(3, 5, (unsigned char *)resultBuf);
+      debugInfo("Avg: %.2f", avgCon);
+
+      // 关闭荧光灯
+      fluLedSetState(0);
     } else {
-      // 如果未加载标准曲线，显示错误 (显示0)
-      SetTextInt32(2, 9, 0, 0, 6);
+      // 如果未加载标准曲线，显示错误信息
+      SetTextValue(3, 2, (unsigned char *)"ERROR");
       debugError("No equation loaded, cannot detect concentration");
     }
     return; // 处理完成，直接返回
@@ -694,20 +737,47 @@ static void btnExeInPage10(u8 control_id, u8 data) {
  * state = 0-->关灯
  */
 static void fluLedSetState(int state) {
-  state ? fluLedControl(1) : fluLedControl(0);
+  // 直接控制GPIO，绕过回调函数
+  if (state) {
+    HAL_GPIO_WritePin(FLU_LED_GPIO_Port, FLU_LED_Pin, GPIO_PIN_SET); // 开灯
+  } else {
+    HAL_GPIO_WritePin(FLU_LED_GPIO_Port, FLU_LED_Pin, GPIO_PIN_RESET); // 关灯
+  }
 }
 
 /* USART1 interrupt */
 void USART1_IRQHandler(void) {
-  //    HAL_UART_IRQHandler(&huart1);
+  // 检查接收非空标志
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET) {
+    // 读取接收到的数据
+    u8 res = (u8)(huart1.Instance->DR & 0xFF);
 
-  //    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE) != RESET) /*!<
-  //    接收非空中断 */
-  //    {
-  u8 res = huart1.Instance->DR;
-  g_Screen.recvBufPush(res, 1);
-  g_Screen.recvBufPush(res, 0);
-  //    }
+    // 推入缓冲区
+    g_Screen.recvBufPush(res, 1); // 系统指令缓冲区
+    g_Screen.recvBufPush(res, 0); // 自定义指令缓冲区
+
+    // 清除接收标志
+    __HAL_UART_CLEAR_FLAG(&huart1, UART_FLAG_RXNE);
+  }
+
+  // 检查并清除溢出错误
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_ORE) != RESET) {
+    __HAL_UART_CLEAR_OREFLAG(&huart1);
+    // 读取DR寄存器清除ORE标志
+    (void)huart1.Instance->DR;
+  }
+
+  // 检查并清除帧错误
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_FE) != RESET) {
+    __HAL_UART_CLEAR_FEFLAG(&huart1);
+    (void)huart1.Instance->DR;
+  }
+
+  // 检查并清除噪声错误
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_NE) != RESET) {
+    __HAL_UART_CLEAR_NEFLAG(&huart1);
+    (void)huart1.Instance->DR;
+  }
 }
 void USART2_IRQHandler(void) {
   /* USER CODE BEGIN USART2_IRQn 0 */

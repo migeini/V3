@@ -450,7 +450,11 @@ static void cmdCallbackCustomBtn(uint8 screen_id, uint8 control_id,
       // 显示平均值 (页面3, 控件5)
       sprintf(resultBuf, "%.2f", avgCon);
       SetTextValue(3, 5, (unsigned char *)resultBuf);
-      debugInfo("Avg: %.2f", avgCon);
+
+      // 同时发送到页面6, 控件2
+      SetTextValue(6, 2, (unsigned char *)resultBuf);
+
+      debugInfo("Avg: %.2f (sent to Page3-Ctrl5 and Page6-Ctrl2)", avgCon);
 
       // 关闭荧光灯
       fluLedSetState(0);

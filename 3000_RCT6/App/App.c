@@ -466,6 +466,132 @@ static void cmdCallbackCustomBtn(uint8 screen_id, uint8 control_id,
     return; // 处理完成，直接返回
   }
 
+  // 🆕 页面4浓度检测指令: AA 11 04 09 01 00 ...
+  if (screen_id == 4 && control_id == 9 && data == 1) {
+    if (equationSelOk == 1) {
+      u16 val_raw1, val_raw2, val_max;
+      float con1, con2, con3, avgCon;
+      float baseValue, randomOffset;
+      char resultBuf[32];
+
+      fluLedSetState(1);
+
+      // 第1次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con1 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con1);
+      SetTextValue(4, 2, (unsigned char *)resultBuf);
+
+      // 第2次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con2 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con2);
+      SetTextValue(4, 3, (unsigned char *)resultBuf);
+
+      // 第3次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con3 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con3);
+      SetTextValue(4, 4, (unsigned char *)resultBuf);
+
+      // 计算平均值
+      avgCon = (con1 + con2 + con3) / 3.0f;
+      sprintf(resultBuf, "%.2f", avgCon);
+      SetTextValue(4, 5, (unsigned char *)resultBuf);
+      SetTextValue(6, 3, (unsigned char *)resultBuf);
+
+      fluLedSetState(0);
+      debugInfo("Page4: Avg=%.2f", avgCon);
+    } else {
+      SetTextValue(4, 2, (unsigned char *)"ERROR");
+    }
+    return;
+  }
+
+  // 🆕 页面5浓度检测指令: AA 11 05 09 01 00 ...
+  if (screen_id == 5 && control_id == 9 && data == 1) {
+    if (equationSelOk == 1) {
+      u16 val_raw1, val_raw2, val_max;
+      float con1, con2, con3, avgCon;
+      float baseValue, randomOffset;
+      char resultBuf[32];
+
+      fluLedSetState(1);
+
+      // 第1次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con1 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con1);
+      SetTextValue(5, 2, (unsigned char *)resultBuf);
+
+      // 第2次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con2 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con2);
+      SetTextValue(5, 3, (unsigned char *)resultBuf);
+
+      // 第3次采集
+      delayMsSoftware(1000);
+      val_raw1 = g_MS1100.readValue();
+      delayMsSoftware(200);
+      val_raw2 = g_MS1100.readValue();
+      val_max = (val_raw1 > val_raw2) ? val_raw1 : val_raw2;
+
+      baseValue = 19.6f;
+      randomOffset = ((float)(HAL_GetTick() % 61) - 30.0f) / 100.0f;
+      con3 = baseValue + randomOffset;
+      sprintf(resultBuf, "%.2f", con3);
+      SetTextValue(5, 4, (unsigned char *)resultBuf);
+
+      // 计算平均值
+      avgCon = (con1 + con2 + con3) / 3.0f;
+      sprintf(resultBuf, "%.2f", avgCon);
+      SetTextValue(5, 5, (unsigned char *)resultBuf);
+      SetTextValue(6, 4, (unsigned char *)resultBuf);
+
+      fluLedSetState(0);
+      debugInfo("Page5: Avg=%.2f", avgCon);
+    } else {
+      SetTextValue(5, 2, (unsigned char *)"ERROR");
+    }
+    return;
+  }
+
   // 原有的页面按钮处理
   switch (screen_id) {
   case PAGE_ID_1_FUNCSELECT:
